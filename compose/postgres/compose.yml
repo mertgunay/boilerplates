@@ -1,0 +1,30 @@
+services:
+  postgres:
+    # build:
+    #   context: .
+    #   dockerfile: ./Dockerfile
+    image: postgres:16.1-alpine
+    container_name: postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data/
+    networks:
+      - postgres_network
+    # Ufw will not work if you use ports.
+    # It will write a row to IPTABLES
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr-TR'
+      - LANG='tr_TR.utf8'
+    logging:
+      options:
+        max-size: 100m
+        max-file: "6"
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+
+volumes:
+  pg_data: { }
+
+networks:
+  postgres_network:
+    driver: bridge
