@@ -1,5 +1,7 @@
 services:
   postgres:
+    # If you want to use more configuration
+    # use Dockerfile instead of image: attribute.
     # build:
     #   context: .
     #   dockerfile: ./Dockerfile
@@ -7,20 +9,37 @@ services:
     container_name: postgres
     volumes:
       - pg_data:/var/lib/postgresql/data/
-    networks:
-      - postgres_network
+    # If you want to isolate your docker container
+    # Use networks configuratios
+    #networks:
+    #  - postgres_network
+    # Otherwise
+    network_mode: host
     # Ufw will not work if you use ports.
-    # It will write a row to IPTABLES
-    ports:
-      - "5432:5432"
+    # It will write a row to IPTABLES even if Ufw block
+    # this port so dont use it if possible.
+    # ports:
+    #  - "${POSTGRES_DB:-5432}:5432"
     environment:
-      - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr-TR'
+      - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr-TR --auth-host=scram-sha-256'
       - LANG='tr_TR.utf8'
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_DB_FILE=/run/secrets/postgres-db
+      - POSTGRES_USER_FILE=/run/secrets/postgres-user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-passwd
     logging:
       options:
         max-size: 100m
         max-file: "6"
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: 10s
+    configs:
+      - source: postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+    secrets:
+      - postgres-db
+      - postgres-user
+      - postgres-passwd
 
 volumes:
   pg_data: { }
@@ -28,3 +47,20 @@ volumes:
 networks:
   postgres_network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+secrets:
+  postgres-db:
+    environment: "POSTGRES_DB"
+  postgres-user:
+    environment: "POSTGRES_USER"
+  postgres-passwd:
+    environment: "POSTGRES_PASSWORD"
+
+configs:
+  postgresql.conf:
+    file: ./postgresql.conf
+  
