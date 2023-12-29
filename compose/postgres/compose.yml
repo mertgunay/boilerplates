@@ -1,28 +1,28 @@
 services:
   postgres:
-    # If you want to use more configuration
+    # If you want to use more configuration,
     # use Dockerfile instead of image: attribute.
-    # build:
-    #   context: .
-    #   dockerfile: ./Dockerfile
-    image: postgres:16.1-alpine
+    build:
+       context: .
+       dockerfile: ./Dockerfile
+    # image: postgres:16.1
     container_name: postgres
     volumes:
       - pg_data:/var/lib/postgresql/data/
-    # If you want to isolate your docker container
-    # Use networks configuratios
+    # If you want to isolate your docker container,
+    # Use networks configurations
     #networks:
     #  - postgres_network
     # Otherwise
     network_mode: host
     # Ufw will not work if you use ports.
-    # It will write a row to IPTABLES even if Ufw block
-    # this port so dont use it if possible.
+    # It will write a row to IPTABLES even if Ufw blocks
+    # this port so don't use it if possible.
     # ports:
     #  - "${POSTGRES_DB:-5432}:5432"
     environment:
-      - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr-TR --auth-host=scram-sha-256'
-      - LANG='tr_TR.utf8'
+      # - LANG='tr_TR.utf8'
+      # - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr_TR'
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_DB_FILE=/run/secrets/postgres-db
       - POSTGRES_USER_FILE=/run/secrets/postgres-user
@@ -40,6 +40,10 @@ services:
       - postgres-db
       - postgres-user
       - postgres-passwd
+    command:
+      - "postgres"
+      - "-c",
+      - "config_file=/etc/postgresql/postgresql.conf"
 
 volumes:
   pg_data: { }
