@@ -42,7 +42,7 @@ services:
       - postgres-passwd
     command:
       - "postgres"
-      - "-c",
+      - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
 
 volumes:
