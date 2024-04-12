@@ -1,0 +1,42 @@
+services:
+
+  nginxproxymanager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 81:81
+      - 443:443
+      # Add any other Stream port you want to expose
+      # - '21:21' # FTP
+    environment:
+      - DB_MYSQL_HOST=db
+      - DB_MYSQL_PORT=3306
+      - DB_MYSQL_USER=npm
+      - DB_MYSQL_PASSWORD=npm
+      - DB_MYSQL_NAME=npm
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - npm-data:/data
+      - npm-ssl:/etc/letsencrypt
+    depends_on:
+      - db
+
+  db:
+    image: 'jc21/mariadb-aria:latest'
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=npm
+      - MYSQL_DATABASE=npm
+      - MYSQL_USER=npm
+      - MYSQL_PASSWORD=npm
+      - MARIADB_AUTO_UPGRADE='1'
+    volumes:
+      - npm-db:/var/lib/mysql
+
+
+volumes:
+  npm-data:
+  npm-ssl:
+  npm-db:
