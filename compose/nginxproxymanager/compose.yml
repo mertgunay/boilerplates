@@ -11,12 +11,12 @@ services:
       # - '21:21' # FTP
     environment:
       - DB_MYSQL_HOST=db
-      - DB_MYSQL_PORT=3306
-      - DB_MYSQL_USER=npm
-      - DB_MYSQL_PASSWORD=npm
-      - DB_MYSQL_NAME=npm
-      - PUID=1000
-      - PGID=1000
+      - DB_MYSQL_PORT=${DB_MYSQL_PORT}
+      - DB_MYSQL_USER=${DB_MYSQL_USER}
+      - DB_MYSQL_PASSWORD=${DB_MYSQL_PASSWORD}
+      - DB_MYSQL_NAME=${DB_MYSQL_NAME}
+      - PUID=${PUID}
+      - PGID=${PGID}
     volumes:
       - npm-data:/data
       - npm-ssl:/etc/letsencrypt
@@ -27,10 +27,10 @@ services:
     image: 'jc21/mariadb-aria:latest'
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=npm
-      - MYSQL_DATABASE=npm
-      - MYSQL_USER=npm
-      - MYSQL_PASSWORD=npm
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MARIADB_AUTO_UPGRADE='1'
     volumes:
       - npm-db:/var/lib/mysql
