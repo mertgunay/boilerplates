@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - 80:80
-      - 81:81
+      - 127.0.0.1:81:81
       - 443:443
       # Add any other Stream port you want to expose
       # - '21:21' # FTP
@@ -22,6 +22,8 @@ services:
       - npm-ssl:/etc/letsencrypt
     depends_on:
       - db
+    env_file:
+      - .env
 
   db:
     image: 'jc21/mariadb-aria:latest'
