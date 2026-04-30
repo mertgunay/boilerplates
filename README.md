@@ -16,8 +16,11 @@ The bar for what lives here:
 - **Defensive port bindings.** Admin / debug interfaces published on
   `127.0.0.1` only by default; ports that have to be public say so.
 - **Secrets via `.env`, never in the repo.** Every stack ships a
-  `.env.example` with placeholder values. Real values fail loudly when
-  missing (`${VAR:?...}` pattern).
+  `.env.example` with required keys left **blank** and optional keys
+  commented out. Required values are validated at compose start-up via
+  the `${VAR:?...}` pattern — running `docker compose up` against a
+  blank `.env` fails loudly instead of silently shipping a default
+  password.
 - **Per-stack README.** Quick start, customising knobs, backup story,
   security checklist, the most common troubleshooting scenarios.
 
@@ -56,6 +59,24 @@ own infra repo and treat it as a starting point. The conventions are
 documented per-stack so you don't have to take the whole repo to use
 one piece.
 
+### Running multiple stacks on the same host
+
+Defaults assume a stack has the host to itself. Common collisions when
+you stack them up:
+
+- **Ports.** `postgres` and `postgres-tr` both default to `5432`;
+  `signoz` and `grafana-lgtm` both bind the OTLP ports `4317/4318`;
+  `nginx`, `nginxproxymanager`, `signoz-with-nginx` and `teleport` all
+  want `:80` / `:443`. Override the published port via the env vars
+  documented in each `.env.example`.
+- **Container names.** Stacks set explicit `container_name:` for
+  ergonomics. If two stacks would land on the same name, set
+  `COMPOSE_PROJECT_NAME` per stack — Docker prefixes it onto resources
+  and avoids the collision.
+- **Compose networks.** Each stack creates its own bridge network — no
+  cross-stack collisions there. To wire a service from stack A to
+  stack B, attach an `external: true` network in both compose files.
+
 ## Conventions
 
 These show up in every stack and the per-stack READMEs assume them:
@@ -84,7 +105,10 @@ Pull requests welcome. The expectations:
 - Keep stacks **standalone**. No shared base images, no implicit
   dependencies between stack directories.
 - No real secrets, hostnames, or internal infrastructure references in
-  configs or comments. Use placeholders (`changeme`, `your-host.example`).
+  configs or comments. Use placeholders (`your-host.example`,
+  `your-cluster`) for documented examples; for required `.env` keys
+  leave the value blank so `${VAR:?}` fails loudly instead of letting
+  a `changeme`-style default reach production.
 - Comments and docs in English.
 
 ## License
