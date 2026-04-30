@@ -55,9 +55,11 @@ services:
     environment:
       # Reference only — Teleport reads cluster_name / public_addrs / rp_id
       # from teleport.yaml, not env vars. These are duplicated here so the
-      # values live in one place (.env) for ops convenience.
-      - TELEPORT_CLUSTER_NAME=${TELEPORT_CLUSTER_NAME:-edit-config-yaml}
-      - TELEPORT_PROXY_PUBLIC_ADDR=${TELEPORT_PROXY_PUBLIC_ADDR:-edit-config-yaml}
+      # values live in one place (.env) for ops convenience and so that a
+      # blank .env fails loudly at compose-validation time. Keep them in
+      # sync with config/teleport.yaml.
+      - TELEPORT_CLUSTER_NAME=${TELEPORT_CLUSTER_NAME:?set TELEPORT_CLUSTER_NAME in your env file (must match auth_service.cluster_name in config/teleport.yaml)}
+      - TELEPORT_PROXY_PUBLIC_ADDR=${TELEPORT_PROXY_PUBLIC_ADDR:?set TELEPORT_PROXY_PUBLIC_ADDR in your env file (must match proxy_service.public_addrs in config/teleport.yaml)}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS --insecure https://localhost/healthz >/dev/null"]
       interval: 30s
