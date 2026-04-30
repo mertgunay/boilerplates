@@ -22,8 +22,10 @@ services and handles HTTP routing, SSL termination, and access lists.
 
 ```sh
 cp .env.example .env
-# Edit .env and replace every `changeme` with a real password.
-# DB_MYSQL_PASSWORD == MYSQL_PASSWORD must match each other.
+# Fill in every blank value. `docker compose config` will error if any
+# required key is missing. Generate passwords with `openssl rand -hex 32`.
+# DB_MYSQL_PASSWORD == MYSQL_PASSWORD must match each other (same goes
+# for USER and DATABASE / NAME — see comments in .env.example).
 ```
 
 ### 2. Boot the stack
@@ -133,9 +135,10 @@ want zero-downtime restores; otherwise NPM will rebuild it from the
 
 ## Security checklist
 
-- [ ] Replaced every `changeme` placeholder credential
+- [ ] Filled in every blank value in `.env` with a strong password
 - [ ] Logged in to the admin UI and changed the default
-      `admin@example.com / changeme` credentials
+      `admin@example.com / changeme` credentials (NPM hardcodes these
+      on first boot — they are unrelated to the .env values above)
 - [ ] Admin UI port (81) is loopback only OR placed behind a strong
       auth layer
 - [ ] DNS pointed at the host only after the above steps

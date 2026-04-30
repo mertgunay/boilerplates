@@ -40,9 +40,9 @@ services:
     environment:
       - DB_MYSQL_HOST=db
       - DB_MYSQL_PORT=3306
-      - DB_MYSQL_USER=${DB_MYSQL_USER}
-      - DB_MYSQL_PASSWORD=${DB_MYSQL_PASSWORD}
-      - DB_MYSQL_NAME=${DB_MYSQL_NAME}
+      - DB_MYSQL_USER=${DB_MYSQL_USER:?set DB_MYSQL_USER in your env file (must match MYSQL_USER)}
+      - DB_MYSQL_PASSWORD=${DB_MYSQL_PASSWORD:?set DB_MYSQL_PASSWORD in your env file (must match MYSQL_PASSWORD)}
+      - DB_MYSQL_NAME=${DB_MYSQL_NAME:?set DB_MYSQL_NAME in your env file (must match MYSQL_DATABASE)}
       - PUID=${PUID:-0}
       - PGID=${PGID:-0}
     volumes:
@@ -69,10 +69,10 @@ services:
     container_name: npm-db
     restart: unless-stopped
     environment:
-      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in your env file}
-      - MARIADB_DATABASE=${MYSQL_DATABASE}
-      - MARIADB_USER=${MYSQL_USER}
-      - MARIADB_PASSWORD=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in your env file}
+      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in your env file (openssl rand -hex 32)}
+      - MARIADB_DATABASE=${MYSQL_DATABASE:?set MYSQL_DATABASE in your env file (must match DB_MYSQL_NAME)}
+      - MARIADB_USER=${MYSQL_USER:?set MYSQL_USER in your env file (must match DB_MYSQL_USER)}
+      - MARIADB_PASSWORD=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in your env file (must match DB_MYSQL_PASSWORD)}
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - npm-db:/var/lib/mysql
