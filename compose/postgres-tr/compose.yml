@@ -1,0 +1,89 @@
+# PostgreSQL with tr_TR.UTF-8 locale.
+#
+# Same shape as compose/postgres, but builds a custom image so the OS-level
+# tr_TR.UTF-8 locale exists before initdb runs (see ./Dockerfile for the why).
+#
+# If you do not need Turkish collation, prefer the generic stack.
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: postgres-tr
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: 30s
+
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - postgres_net
+
+    # Alternative: host networking. See the generic stack for the ufw caveat.
+    # network_mode: host
+
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_DB_FILE=/run/secrets/postgres-db
+      - POSTGRES_USER_FILE=/run/secrets/postgres-user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-passwd
+      # Lock the cluster locale at initdb time. These take effect ONLY on the
+      # very first boot (when the data volume is empty). To change them later
+      # you must dump, drop the volume, recreate, and restore.
+      - LANG=tr_TR.UTF-8
+      - POSTGRES_INITDB_ARGS=--locale=tr_TR.UTF-8 --encoding=UTF8
+
+    secrets:
+      - postgres-db
+      - postgres-user
+      - postgres-passwd
+
+    configs:
+      - source: postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # - ./initdb:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$(cat /run/secrets/postgres-user)\" -d \"$$(cat /run/secrets/postgres-db)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "6"
+
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "2.0"
+    #       memory: 2g
+
+volumes:
+  pg_data: {}
+
+networks:
+  postgres_net:
+    driver: bridge
+
+secrets:
+  postgres-db:
+    environment: "POSTGRES_DB"
+  postgres-user:
+    environment: "POSTGRES_USER"
+  postgres-passwd:
+    environment: "POSTGRES_PASSWORD"
+
+configs:
+  postgresql.conf:
+    file: ./postgresql.conf
