@@ -1,0 +1,209 @@
+# Grafana LGTM stack — Loki, Grafana, Tempo, Mimir + Pyroscope and Alloy.
+#
+# A single-pane-of-glass observability stack:
+#   - Grafana   — UI, alerting, dashboards
+#   - Loki      — logs
+#   - Tempo     — traces (OTLP gRPC :4317 / HTTP :4318)
+#   - Mimir     — metrics (Prometheus-compatible)
+#   - Pyroscope — continuous profiling
+#   - Alloy     — agent on this host: scrapes container logs and host metrics,
+#                 forwards them to Loki and Mimir respectively
+#
+# Datasources are auto-provisioned (provisioning/datasources/datasources.yml),
+# so Grafana shows all four backends connected on first boot.
+#
+# Defaults:
+#   - All services have explicit memory + cpu limits, healthchecks, and use
+#     the shared `x-logging-default` anchor (50m × 5, gzip).
+#   - Internal named volumes for state (no `external: true`).
+#   - Grafana UI is published on 127.0.0.1 only by default.
+#   - Tempo OTLP receivers are published on all interfaces — restrict at the
+#     host firewall or move to a private network if needed.
+#   - 90 day retention is set across logs (Loki), metrics (Mimir), traces
+#     (Tempo, 2160h) and profiles (Pyroscope, 2160h).
+#
+# !! If you also run the SigNoz stack on this host: it uses the same
+#    OTLP ports (4317/4318). Run only one, or remap the ports below.
+#
+# Requires Docker Compose v2.20+ and ~6 GB RAM headroom (Mimir is the
+# largest at 2 GB).
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+services:
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: lgtm-grafana
+    restart: unless-stopped
+    depends_on:
+      loki:      { condition: service_healthy }
+      tempo:     { condition: service_healthy }
+      mimir:     { condition: service_healthy }
+      pyroscope: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in your env file}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_FEEDBACK_LINKS_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging: *logging-default
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: lgtm-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./config/loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    logging: *logging-default
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    container_name: lgtm-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    ports:
+      # OTLP receivers. Same ports as the SigNoz stack — pick one or remap.
+      - "${TEMPO_OTLP_GRPC_PORT:-4317}:4317"
+      - "${TEMPO_OTLP_HTTP_PORT:-4318}:4318"
+    volumes:
+      - ./config/tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3200/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    logging: *logging-default
+
+  mimir:
+    image: grafana/mimir:2.14.0
+    container_name: lgtm-mimir
+    restart: unless-stopped
+    command: ["-config.file=/etc/mimir/config.yaml"]
+    volumes:
+      - ./config/mimir/config.yaml:/etc/mimir/config.yaml:ro
+      - mimir-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9009/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
+        reservations:
+          memory: 512m
+    logging: *logging-default
+
+  pyroscope:
+    image: grafana/pyroscope:1.9.0
+    container_name: lgtm-pyroscope
+    restart: unless-stopped
+    command: ["-config.file=/etc/pyroscope/config.yaml"]
+    volumes:
+      - ./config/pyroscope/config.yaml:/etc/pyroscope/config.yaml:ro
+      - pyroscope-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4040/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging: *logging-default
+
+  # Alloy collects container logs (via the Docker socket) and host metrics
+  # (via /proc, /sys, and the rootfs). Mounts are read-only but the docker.sock
+  # mount is still a high-trust mount — review before enabling on shared hosts.
+  alloy:
+    image: grafana/alloy:v1.5.0
+    container_name: lgtm-alloy
+    restart: unless-stopped
+    depends_on:
+      loki:  { condition: service_healthy }
+      mimir: { condition: service_healthy }
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Host metrics — paths must match prometheus.exporter.unix in config.alloy.
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:12345/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging: *logging-default
+
+networks:
+  default:
+    name: grafana_lgtm_net
+
+volumes:
+  grafana-data:
+  loki-data:
+  tempo-data:
+  mimir-data:
+  pyroscope-data:

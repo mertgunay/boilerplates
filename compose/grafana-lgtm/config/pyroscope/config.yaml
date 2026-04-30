@@ -1,0 +1,23 @@
+# Single-binary Pyroscope (target: all). Filesystem storage is fine for
+# light load; for production swap to S3-compatible.
+
+target: all
+
+server:
+  http_listen_port: 4040
+  log_level: warn
+
+storage:
+  backend: filesystem
+  filesystem:
+    dir: /data
+
+self_profiling:
+  disable_push: true
+
+analytics:
+  reporting_enabled: false
+
+# 90 day retention (2160 hours).
+limits:
+  compactor_blocks_retention_period: 2160h

@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Drop *.json dashboard files into this directory and Grafana will load
+# them under the "Infrastructure" folder. Subdirectories are mapped to
+# nested folders (foldersFromFilesStructure).
+providers:
+  - name: "default"
+    orgId: 1
+    folder: "Infrastructure"
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 600
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
