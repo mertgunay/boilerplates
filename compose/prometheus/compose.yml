@@ -1,41 +1,104 @@
-version: "3.8"
+# Prometheus + node-exporter + cAdvisor — host monitoring boilerplate.
+#
+# Defaults:
+#   - All images version-pinned.
+#   - Prometheus UI on 127.0.0.1:9090 only by default.
+#   - cAdvisor UI on 127.0.0.1:8080 only by default.
+#   - 30 day TSDB retention. Bump or shrink via --storage.tsdb.retention.time
+#     in the prometheus command, or use --storage.tsdb.retention.size for
+#     a disk cap.
+#   - Healthchecks on all three services so dependents can wait on them.
+#   - Resource limits so a runaway scrape can't starve the host.
+#   - Log rotation via the shared `x-logging-default` anchor.
+#
+# What this stack does NOT include:
+#   - Alertmanager. Add it (or wire prometheus.yml to an existing one) when
+#     you actually want alerts to fire.
+#   - Long-term / remote storage. The README points at Thanos / Mimir / VM
+#     for scaling beyond a single node.
+#   - TLS or auth in front of the Prometheus UI. It's loopback only — put
+#     it behind a reverse proxy if you need to expose it.
+#
+# Requires Docker Compose v2.20+.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
 
 services:
+
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.0
     container_name: prometheus
+    restart: unless-stopped
     command:
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=7d
       - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle    # POST /-/reload to hot-reload prometheus.yml
     volumes:
       - prometheus_data:/prometheus
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     networks:
-      - monitoring
-    restart: unless-stopped
+      - prometheus_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    logging: *logging-default
 
   node-exporter:
-    image: quay.io/prometheus/node-exporter:latest
-    container_name: node_exporter
-    networks:
-      - monitoring
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: node-exporter
     restart: unless-stopped
     command:
-      - '--path.rootfs=/host'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+      - --path.rootfs=/host/root
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/credentials/.+|var/lib/docker/.+)($$|/)
     volumes:
-      - '/proc:/host/proc:ro'
-      - '/sys:/host/sys:ro'
-      - '/:/rootfs:ro,rslave'
-      - '/:/host:ro,rslave'
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+    networks:
+      - prometheus_net
+    # No port published — Prometheus reaches it via container DNS at
+    # node-exporter:9100. Expose only if you want to scrape it externally.
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+    logging: *logging-default
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.50.0
     container_name: cadvisor
+    restart: unless-stopped
+    # Privileged + the device mount are how cAdvisor reads host kernel
+    # statistics. This is a high-trust container — review before enabling
+    # on shared hosts.
+    privileged: true
+    devices:
+      - "/dev/kmsg:/dev/kmsg"
     volumes:
       - /:/rootfs:ro,rslave
       - /var/run:/var/run:ro
@@ -43,17 +106,25 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "8080:8080"
+      - "127.0.0.1:${CADVISOR_PORT:-8080}:8080"
     networks:
-      - monitoring
-    privileged: true
-    devices:
-      - "/dev/kmsg:/dev/kmsg"
-    restart: unless-stopped
+      - prometheus_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    logging: *logging-default
 
 volumes:
-  prometheus_data: { }
+  prometheus_data:
 
 networks:
-  monitoring:
+  prometheus_net:
     driver: bridge

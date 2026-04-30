@@ -1,28 +1,50 @@
 global:
   scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+# Add rule files here to load alert / recording rules.
+# rule_files:
+#   - /etc/prometheus/rules/*.yml
 
 scrape_configs:
 
-  # Make Prometheus scrape itself for metrics.
-  - job_name: 'prometheus'
+  # Prometheus itself.
+  - job_name: prometheus
     scrape_interval: 1m
     static_configs:
-    - targets: ['prometheus:9090']
+      - targets: ['prometheus:9090']
 
-  # Node exporter metrics
-  - job_name: 'node'
+  # Host metrics (node-exporter is on the same compose network).
+  - job_name: node
     static_configs:
-    - targets: ['node-exporter:9100']
+      - targets: ['node-exporter:9100']
 
-  # cAdvisor exporter metrics
-  - job_name: 'cadvisor'
+  # Container metrics from cAdvisor.
+  - job_name: cadvisor
     static_configs:
-    - targets: ['cadvisor:8080']
+      - targets: ['cadvisor:8080']
 
-  # Others...
+  # Add your own scrape jobs here. Examples:
+  #
+  # - job_name: my-app
+  #   static_configs:
+  #     - targets: ['host.docker.internal:8000']
+  #
+  # - job_name: kubernetes-pods
+  #   kubernetes_sd_configs: [...]
 
-remote_write:
-  - url: <Remote_IP>
-    basic_auth:
-      username: <username>
-      password: <password>
+# Optional: forward all samples to a long-term store (Thanos receive,
+# Cortex / Mimir, VictoriaMetrics, Grafana Cloud, etc).
+# Uncomment and set REMOTE_WRITE_URL (and optionally credentials) in your
+# env file. Prometheus reads env vars at startup; use $$VAR to defer
+# expansion through Docker Compose.
+#
+# remote_write:
+#   - url: ${REMOTE_WRITE_URL}
+#     basic_auth:
+#       username: ${REMOTE_WRITE_USER}
+#       password: ${REMOTE_WRITE_PASSWORD}
+#     queue_config:
+#       capacity: 10000
+#       max_samples_per_send: 5000
