@@ -1,0 +1,78 @@
+# Standalone Redis — cache / session store / queue backend.
+#
+# Defaults:
+#   - redis:7.4-alpine, version-pinned.
+#   - Password is required (`requirepass`). The container fails loudly
+#     on missing REDIS_PASSWORD via `${VAR:?...}`.
+#   - AOF persistence on (durable; survives unclean shutdown). RDB
+#     snapshots are kept alongside (faster cold start).
+#   - Bind to 127.0.0.1:6379 only by default. Move to 0.0.0.0 or
+#     remap explicitly when you actually want external clients.
+#   - Healthcheck via `redis-cli ping`.
+#   - Resource limits set, shared logging anchor.
+#   - Optional bind-mount for a custom redis.conf — uncomment in
+#     compose.yml + drop a file into ./config/.
+#
+# Connect from another container on this network:
+#   redis://default:${REDIS_PASSWORD}@redis:6379/0
+#
+# Connect from the host:
+#   redis-cli -h 127.0.0.1 -p 6379 -a "$REDIS_PASSWORD"
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+services:
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in your env file (openssl rand -hex 32)}
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      # Uncomment to cap the keyspace and pick an eviction policy.
+      # - --maxmemory
+      # - 256mb
+      # - --maxmemory-policy
+      # - allkeys-lru
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+      # Optional: drop a custom redis.conf into ./config/ and uncomment
+      # the lines below to load it instead of the inline command flags.
+      # - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - redis_net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      # Used by the healthcheck only. Redis itself reads requirepass via the command line.
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    logging: *logging-default
+
+volumes:
+  redis-data:
+
+networks:
+  redis_net:
+    name: redis_net
