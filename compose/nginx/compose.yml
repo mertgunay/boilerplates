@@ -1,0 +1,75 @@
+# Standalone nginx — reverse proxy / static server / load balancer.
+#
+# When to use this vs. compose/nginxproxymanager:
+#   - Pick nginx (this) if you write nginx.conf yourself, deploy as code,
+#     and don't want a database or a graphical admin UI.
+#   - Pick nginxproxymanager if you want a UI, ACME automation, and per-host
+#     access lists, and you're OK with a MariaDB sidecar.
+#
+# Defaults:
+#   - nginx:1.27-alpine, version-pinned.
+#   - Hardened: read_only filesystem, dropped Linux capabilities, tmpfs
+#     mounts for the writeable paths nginx actually needs.
+#   - Public ports :80 and :443. Restrict at the host firewall or remap
+#     via NGINX_HTTP_PORT / NGINX_HTTPS_PORT if needed.
+#   - Bind-mounts for config (conf.d), static content (html), and TLS
+#     certs (certs).
+#   - Healthcheck via `wget` against the default location.
+#
+# To reach upstream containers, attach them to the `nginx_net` network
+# (or the network they expose) and use their service name as the
+# upstream host in your config.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+services:
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /var/log/nginx
+      - /tmp
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./html:/usr/share/nginx/html:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - nginx_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost/ || wget --spider -q http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging: *logging-default
+
+networks:
+  nginx_net:
+    name: nginx_net
