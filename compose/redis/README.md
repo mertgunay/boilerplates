@@ -1,6 +1,8 @@
 # redis
 
-Standalone Redis — cache, session store, queue backend, anything you'd
+**Self-hosted Redis** with a mandatory password, AOF persistence,
+loopback-only port binding by default, and a hardened standalone
+config — cache, session store, queue backend, or anything you'd
 reach for with a key-value store.
 
 > Boilerplate / starter. Single-node Redis with password auth and

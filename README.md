@@ -1,9 +1,12 @@
 # boilerplates
 
-A small, opinionated collection of Docker Compose stacks for things you
-end up self-hosting often. Each stack starts from an upstream / vendor
-default and adds the production-leaning details that turn a quickstart
-into something you'd actually run on a fleet.
+**Production-leaning Docker Compose stacks for self-hosting** — Postgres,
+Redis, nginx, Nginx Proxy Manager, Selenium Grid, Prometheus, SigNoz,
+Grafana LGTM, Teleport, and friends. Each stack starts from the
+upstream / vendor default and layers on the operational details that
+turn a quickstart into something you'd actually run on a fleet:
+pinned versions, healthchecks on every service, fail-loud secrets,
+defensive port bindings, hardened nginx defaults.
 
 The bar for what lives here:
 
@@ -25,6 +28,10 @@ The bar for what lives here:
   security checklist, the most common troubleshooting scenarios.
 
 ## Stacks
+
+Pick the row that matches what you're trying to self-host. Every
+stack is independent — copy a single directory into your own infra
+repo and treat it as a starting point.
 
 | Stack | Purpose |
 | --- | --- |

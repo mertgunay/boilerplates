@@ -1,8 +1,9 @@
 # selenium-grid
 
-[Selenium Grid 4](https://www.selenium.dev/documentation/grid/) — hub +
-one Chrome node out of the box, with commented templates for Firefox
-and Edge nodes.
+**Self-hosted [Selenium Grid 4](https://www.selenium.dev/documentation/grid/)**
+— hub + one Chrome node out of the box, scalable to N nodes with
+`--scale chrome=N`, plus commented templates for Firefox and Edge
+nodes and an optional noVNC for live debugging.
 
 > Boilerplate / starter. Selenium nodes load arbitrary user-controlled
 > URLs by design — keep the hub off the public internet.

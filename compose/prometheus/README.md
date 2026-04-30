@@ -1,6 +1,7 @@
 # prometheus
 
-A small but production-leaning Prometheus host-monitoring stack:
+**Self-hosted Prometheus + node-exporter + cAdvisor** — a production-leaning
+host-monitoring stack with 30-day TSDB retention:
 
 - **prometheus** — TSDB + UI + scrape engine
 - **node-exporter** — host-level metrics (CPU, memory, disk, network, ...)

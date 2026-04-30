@@ -1,7 +1,9 @@
 # nginx
 
-Standalone hardened nginx — reverse proxy, static server, or load
-balancer, configured by editing the files in `./conf.d/`.
+**Self-hosted hardened nginx** — read-only filesystem, dropped Linux
+capabilities, tmpfs mounts for the writeable paths nginx actually
+needs. Use as a reverse proxy, static server, or load balancer; drop
+server blocks into `./conf.d/` and static files into `./html/`.
 
 > Boilerplate / starter. Sensible hardening defaults but no opinions
 > about what you serve. Drop your own server blocks into `conf.d/` and

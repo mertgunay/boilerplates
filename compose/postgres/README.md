@@ -1,7 +1,9 @@
 # postgres
 
-Generic PostgreSQL stack — official `postgres:17-alpine` image, file-based Docker
-secrets, scram-sha-256 auth, healthcheck, log rotation, persistent named volume.
+**Self-hosted PostgreSQL** in a single hardened Docker Compose file —
+official `postgres:17-alpine` image, file-based Docker secrets,
+scram-sha-256 auth, healthcheck, log rotation, persistent named
+volume, `--data-checksums` for early on-disk corruption detection.
 
 > Boilerplate / starter. Review every default before running this in production.
 > In particular: fill in `.env` with real credentials (the file ships blank so

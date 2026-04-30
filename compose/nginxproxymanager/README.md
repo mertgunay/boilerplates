@@ -1,7 +1,8 @@
 # nginxproxymanager
 
-[Nginx Proxy Manager](https://nginxproxymanager.com) — graphical reverse
-proxy + Let's Encrypt automation. Sits in front of one or more upstream
+**Self-hosted [Nginx Proxy Manager](https://nginxproxymanager.com) +
+MariaDB on a split internal network** — a graphical reverse proxy
+with Let's Encrypt automation. Sits in front of one or more upstream
 services and handles HTTP routing, SSL termination, and access lists.
 
 > Boilerplate / starter. NPM is internet-facing by design (`:80` /

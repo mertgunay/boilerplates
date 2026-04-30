@@ -1,9 +1,11 @@
 # signoz
 
-Self-hosted [SigNoz](https://signoz.io) — a single pane of glass for traces,
-logs, and metrics, backed by ClickHouse + ZooKeeper. This is the **minimal
-core**: no reverse proxy, no TLS. The SigNoz UI is published on `127.0.0.1`
-only by default.
+**Self-hosted [SigNoz](https://signoz.io) observability stack** — a
+single pane of glass for traces, logs, and metrics, backed by
+ClickHouse + ZooKeeper, with the SigNoz OpenTelemetry Collector
+ingesting OTLP on `:4317` (gRPC) and `:4318` (HTTP). This is the
+**minimal core**: no reverse proxy, no TLS. The SigNoz UI is
+published on `127.0.0.1` only by default.
 
 If you want a hardened nginx reverse proxy with rate limiting and security
 headers in front, use [`compose/signoz-with-nginx`](../signoz-with-nginx)

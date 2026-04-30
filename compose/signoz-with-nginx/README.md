@@ -1,9 +1,11 @@
 # signoz-with-nginx
 
-SigNoz with a hardened nginx reverse proxy in front of the UI. Same
-core as [`compose/signoz`](../signoz/README.md) (clickhouse + zookeeper
-+ signoz UI + otel-collector + migrators) — see that README for setup,
-backup, version bumps, and the full security checklist.
+**Self-hosted [SigNoz](https://signoz.io) behind a hardened nginx
+reverse proxy** — rate limiting, security headers, JSON access log,
+gzip, and a clear seam to add TLS. Same core as
+[`compose/signoz`](../signoz/README.md) (clickhouse + zookeeper +
+signoz UI + otel-collector + migrators) — see that README for
+setup, backup, version bumps, and the full security checklist.
 
 > Boilerplate / starter. Same disclaimers as the minimal core apply.
 

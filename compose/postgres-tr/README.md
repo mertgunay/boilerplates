@@ -1,8 +1,10 @@
 # postgres-tr
 
-PostgreSQL with the `tr_TR.UTF-8` locale baked into a custom image. Same shape
-as [`compose/postgres`](../postgres/README.md) (secrets, healthcheck, network
-defaults, log rotation) — see that README for the bulk of the documentation.
+**Self-hosted PostgreSQL with Turkish locale (`tr_TR.UTF-8`)** baked
+into a custom image. Same shape as
+[`compose/postgres`](../postgres/README.md) (secrets, healthcheck,
+network defaults, log rotation) — see that README for the bulk of
+the documentation.
 
 > Boilerplate / starter. Same disclaimers as the generic stack apply.
 

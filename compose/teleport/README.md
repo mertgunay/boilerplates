@@ -1,9 +1,11 @@
 # teleport
 
-Self-hosted [Teleport Community Edition](https://goteleport.com) —
-identity-based access for SSH, Kubernetes, databases, and internal web
-apps. This stack runs auth + proxy + ssh in a single container, which is
-the right shape for a small fleet or homelab.
+**Self-hosted [Teleport Community Edition](https://goteleport.com) —
+single-node identity-based access** for SSH, Kubernetes, databases,
+and internal web apps, with WebAuthn MFA and TLS routing on `:443`
+(every protocol multiplexed onto a single public port). This stack
+runs auth + proxy + ssh in a single container, which is the right
+shape for a small fleet or homelab.
 
 > Boilerplate / starter. Teleport is identity infrastructure — when it
 > goes down, you can't reach anything that depends on it. Read the

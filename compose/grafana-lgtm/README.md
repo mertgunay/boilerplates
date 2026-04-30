@@ -1,6 +1,8 @@
 # grafana-lgtm
 
-Self-hosted **Grafana LGTM** — a single-pane-of-glass observability stack:
+**Self-hosted Grafana LGTM observability stack** — a single-pane-of-glass
+observability stack on Grafana with logs, metrics, traces, and
+profiles, all in one Docker Compose file with datasources auto-provisioned:
 
 - **L**oki — logs
 - **G**rafana — UI, alerting, dashboards
