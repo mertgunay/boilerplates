@@ -10,7 +10,7 @@
 #
 # To use a different locale, change LANG and the localedef line.
 
-FROM postgres:17
+FROM postgres:18
 
 RUN localedef -i tr_TR -c -f UTF-8 -A /usr/share/locale/locale.alias tr_TR.UTF-8
 ENV LANG=tr_TR.UTF-8
