@@ -42,10 +42,14 @@ services:
     container_name: lgtm-grafana
     restart: unless-stopped
     depends_on:
-      loki:      { condition: service_healthy }
-      tempo:     { condition: service_healthy }
-      mimir:     { condition: service_healthy }
-      pyroscope: { condition: service_healthy }
+      loki:  { condition: service_healthy }
+      tempo: { condition: service_healthy }
+      # Mimir and Pyroscope ship distroless images — no shell, no
+      # curl/wget — so no in-container healthcheck is possible. Wait
+      # for the process to start; Grafana's datasource health probe
+      # will surface any backend-side issue at query time.
+      mimir:     { condition: service_started }
+      pyroscope: { condition: service_started }
     ports:
       - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
     environment:
@@ -126,12 +130,9 @@ services:
     volumes:
       - ./config/mimir/config.yaml:/etc/mimir/config.yaml:ro
       - mimir-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:9009/ready"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    # Mimir's image is distroless — no shell, no curl/wget — so we cannot
+    # run an in-container healthcheck. Dependents wait on `service_started`
+    # instead. Mimir's /ready endpoint stays exposed for external probes.
     deploy:
       resources:
         limits:
@@ -149,12 +150,10 @@ services:
     volumes:
       - ./config/pyroscope/config.yaml:/etc/pyroscope/config.yaml:ro
       - pyroscope-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:4040/ready"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    # Pyroscope's image is distroless — no shell, no curl/wget — so we
+    # cannot run an in-container healthcheck. Dependents wait on
+    # `service_started` instead. Pyroscope's own /ready endpoint is
+    # still exposed for external probes (LB, Grafana datasource test).
     deploy:
       resources:
         limits:
@@ -171,7 +170,8 @@ services:
     restart: unless-stopped
     depends_on:
       loki:  { condition: service_healthy }
-      mimir: { condition: service_healthy }
+      # Mimir is distroless — see grafana service for the rationale.
+      mimir: { condition: service_started }
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345

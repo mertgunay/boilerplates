@@ -9,19 +9,19 @@ server:
   log_level: warn
 
 activity_tracker:
-  filepath: /data/mimir/activity.log
+  filepath: /data/activity.log
 
 blocks_storage:
   backend: filesystem
   bucket_store:
-    sync_dir: /data/mimir/tsdb-sync
+    sync_dir: /data/tsdb-sync
   filesystem:
-    dir: /data/mimir/blocks
+    dir: /data/blocks
   tsdb:
-    dir: /data/mimir/tsdb
+    dir: /data/tsdb
 
 compactor:
-  data_dir: /data/mimir/compactor
+  data_dir: /data/compactor
   sharding_ring:
     kvstore:
       store: memberlist
@@ -44,12 +44,12 @@ store_gateway:
     replication_factor: 1
 
 ruler:
-  rule_path: /data/mimir/ruler
+  rule_path: /data/ruler
 
 ruler_storage:
   backend: filesystem
   filesystem:
-    dir: /data/mimir/rules
+    dir: /data/rules
 
 limits:
   compactor_blocks_retention_period: 90d

@@ -42,10 +42,21 @@ OTLP ports `:4317` / `:4318`. Pick one, or remap the ports.
 
 - Docker Engine 24+, Docker Compose v2.20+
 - ~6 GB RAM headroom (Mimir alone is limited to 2 GB)
-- Linux host preferred — the Alloy `/:/host/root:ro,rslave` mount uses
-  `rslave` propagation which Docker Desktop on macOS handles inconsistently
-  (host-metrics collection may give partial data). The rest of the stack
-  works fine cross-platform.
+- **Linux host required for the Alloy agent.** Alloy mounts `/`, `/proc`
+  and `/sys` with `rslave` propagation to read host metrics and the
+  Docker socket. Docker Desktop on macOS / Windows runs containers in a
+  VM that does not share mount propagation, so the `alloy` service fails
+  to start with `path / is mounted on / but it is not a shared or slave
+  mount`. The rest of the stack (grafana / loki / tempo / mimir /
+  pyroscope) runs fine cross-platform — comment out the `alloy` service
+  if you only want the backends on a non-Linux dev box.
+
+### Healthcheck note
+
+Mimir and Pyroscope ship distroless images — no shell, no `wget`/`curl`
+inside — so no in-container healthcheck is possible. Dependent services
+(`grafana`, `alloy`) wait on `condition: service_started` for those two.
+Their `/ready` endpoints stay exposed for external probes.
 
 ## Architecture
 
