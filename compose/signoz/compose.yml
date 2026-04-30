@@ -1,0 +1,226 @@
+# SigNoz — minimal self-hosted observability core (no reverse proxy).
+#
+# Single pane of glass for traces, logs, and metrics. Telemetry is ingested via
+# OTLP at :4317 (gRPC) / :4318 (HTTP) and stored in ClickHouse. Alert rules,
+# dashboards, and users live in a SQLite volume.
+#
+# Defaults:
+#   - All services have explicit memory + cpu limits (the upstream SigNoz
+#     compose leaves clickhouse and zookeeper unbounded — we don't).
+#   - Internal named volumes (no `external: true`).
+#   - Bridge network `signoz_net`.
+#   - SigNoz UI port (8080) is published on 127.0.0.1 only. Put it behind a
+#     reverse proxy (see ../signoz-with-nginx) or inside a private network
+#     before exposing it more broadly.
+#   - Log rotation via the `x-logging-default` anchor (50MB × 5, compressed).
+#
+# Requires Docker Compose v2.20+ and ~3 GB RAM headroom for ClickHouse on
+# light load. Telemetry retention is configured at runtime via the SigNoz UI
+# (Settings → Data Retention) — there are no compose-time TTL knobs.
+#
+# !! Before first boot you MUST fetch the ClickHouse XML configs from upstream:
+#
+#   git clone --depth 1 https://github.com/SigNoz/signoz.git /tmp/signoz-src
+#   mkdir -p ./config/clickhouse
+#   cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/*.xml \
+#      ./config/clickhouse/
+#   # see README.md for the exact list and version-pin guidance.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+x-clickhouse-defaults: &clickhouse-defaults
+  image: clickhouse/clickhouse-server:25.5.6
+  tty: true
+  restart: unless-stopped
+  depends_on:
+    init-clickhouse:
+      condition: service_completed_successfully
+    zookeeper-1:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 262144
+      hard: 262144
+  environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+  logging: *logging-default
+
+x-zookeeper-defaults: &zookeeper-defaults
+  image: signoz/zookeeper:3.7.1
+  user: root
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+  logging: *logging-default
+
+x-db-depend: &db-depend
+  restart: unless-stopped
+  depends_on:
+    clickhouse:
+      condition: service_healthy
+  logging: *logging-default
+
+services:
+
+  # One-shot helper: fetches the histogram-quantile UDF binary that SigNoz
+  # uses for percentile queries. Runs once and exits successfully.
+  init-clickhouse:
+    image: clickhouse/clickhouse-server:25.5.6
+    container_name: signoz-init-clickhouse
+    command:
+      - bash
+      - -c
+      - |
+        version="v0.0.1"
+        node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+        node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+        cd /tmp
+        wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+        tar -xvzf histogram-quantile.tar.gz
+        mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    restart: on-failure
+    volumes:
+      - ./config/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+    logging: *logging-default
+
+  zookeeper-1:
+    <<: *zookeeper-defaults
+    container_name: signoz-zookeeper-1
+    volumes:
+      - signoz-zookeeper-1:/bitnami/zookeeper
+    environment:
+      - ZOO_SERVER_ID=1
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_AUTOPURGE_INTERVAL=1
+      - ZOO_ENABLE_PROMETHEUS_METRICS=yes
+      - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+
+  clickhouse:
+    <<: *clickhouse-defaults
+    container_name: signoz-clickhouse
+    volumes:
+      # Vendor configs — fetch from upstream signoz/signoz repo (see header).
+      - ./config/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ./config/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ./config/clickhouse/custom-function.xml:/etc/clickhouse-server/custom-function.xml
+      - ./config/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
+      - ./config/clickhouse/users.d:/etc/clickhouse-server/users.d:ro
+      - ./config/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+      - signoz-clickhouse:/var/lib/clickhouse/
+    deploy:
+      resources:
+        limits:
+          # ClickHouse is the heavy lifter. Tune to your host. Floor for any
+          # real workload is ~2g; production deployments commonly run 8g+.
+          memory: 2g
+          cpus: "2.0"
+        reservations:
+          memory: 1g
+
+  signoz:
+    <<: *db-depend
+    image: signoz/signoz:${SIGNOZ_VERSION:-v0.120.0}
+    container_name: signoz
+    volumes:
+      - signoz-sqlite:/var/lib/signoz/
+    ports:
+      # UI on loopback only. Put a reverse proxy in front (see signoz-with-nginx)
+      # or place this stack on a private network before exposing more broadly.
+      - "127.0.0.1:${SIGNOZ_UI_PORT:-8080}:8080"
+    environment:
+      - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+      - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET:?set SIGNOZ_JWT_SECRET in your env file (openssl rand -hex 32)}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+
+  otel-collector:
+    <<: *db-depend
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTELCOL_VERSION:-v0.144.3}
+    container_name: signoz-otel-collector
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate sync check &&
+        /signoz-otel-collector --config=/etc/otel-collector-config.yaml --manager-config=/etc/manager-config.yaml --copy-path=/var/tmp/collector-config.yaml
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      # Vendor manager config — fetch from upstream signoz/signoz repo.
+      - ./config/otel-collector-opamp-config.yaml:/etc/manager-config.yaml
+    environment:
+      # Identify this collector instance in produced metrics. Set HOST_NAME
+      # to something stable (e.g. the host's hostname).
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=${SIGNOZ_HOST_NAME:-signoz},os.type=linux
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    ports:
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+
+  # One-shot: applies SigNoz schema migrations to ClickHouse on every up.
+  # Exits 0 once migrations are current.
+  signoz-telemetrystore-migrator:
+    <<: *db-depend
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTELCOL_VERSION:-v0.144.3}
+    container_name: signoz-telemetrystore-migrator
+    environment:
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate bootstrap &&
+        /signoz-otel-collector migrate sync up &&
+        /signoz-otel-collector migrate async up
+    restart: on-failure
+
+networks:
+  default:
+    name: signoz_net
+
+volumes:
+  signoz-clickhouse:
+  signoz-sqlite:
+  signoz-zookeeper-1:
