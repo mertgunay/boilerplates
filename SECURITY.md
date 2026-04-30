@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you find a security issue in any of the boilerplates here — a
+If you find a security issue in any of the stacks here — a
 default config that exposes a port it shouldn't, a privilege the
 container does not need, a secret that leaks somewhere, an outdated
 image with a known CVE — please report it privately first. **Do not
@@ -11,10 +11,10 @@ open a public issue.**
 Two ways to reach out, in order of preference:
 
 1. **GitHub Security Advisories.** Use the
-   [Report a vulnerability](https://github.com/mertgunay/boilerplates/security/advisories/new)
+   [Report a vulnerability](https://github.com/mertgunay/homelab/security/advisories/new)
    button on this repo's Security tab. This keeps the discussion
    private until a fix is ready.
-2. **Email.** `se.mertgunay@gmail.com`. Mention "boilerplates security"
+2. **Email.** `se.mertgunay@gmail.com`. Mention "homelab security"
    in the subject so it doesn't get filtered.
 
 Please include:

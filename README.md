@@ -1,9 +1,9 @@
-# boilerplates
+# homelab
 
-[![License: MIT](https://img.shields.io/github/license/mertgunay/boilerplates)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/mertgunay/boilerplates?display_name=tag&sort=semver)](https://github.com/mertgunay/boilerplates/releases)
-[![Last commit](https://img.shields.io/github/last-commit/mertgunay/boilerplates)](https://github.com/mertgunay/boilerplates/commits/main)
-[![Open issues](https://img.shields.io/github/issues/mertgunay/boilerplates)](https://github.com/mertgunay/boilerplates/issues)
+[![License: MIT](https://img.shields.io/github/license/mertgunay/homelab)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/mertgunay/homelab?display_name=tag&sort=semver)](https://github.com/mertgunay/homelab/releases)
+[![Last commit](https://img.shields.io/github/last-commit/mertgunay/homelab)](https://github.com/mertgunay/homelab/commits/main)
+[![Open issues](https://img.shields.io/github/issues/mertgunay/homelab)](https://github.com/mertgunay/homelab/issues)
 
 **Production-leaning Docker Compose stacks for self-hosting** — Postgres,
 Redis, nginx, Nginx Proxy Manager, Selenium Grid, Prometheus, SigNoz,
@@ -55,8 +55,8 @@ repo and treat it as a starting point.
 ## Using a stack
 
 ```sh
-git clone https://github.com/mertgunay/boilerplates.git
-cd boilerplates/compose/<stack>
+git clone https://github.com/mertgunay/homelab.git
+cd homelab/compose/<stack>
 
 cp .env.example .env          # if the stack ships one
 $EDITOR .env                  # set real values

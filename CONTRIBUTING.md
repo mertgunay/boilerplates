@@ -7,7 +7,7 @@ mysterious — read this once and you'll know what to expect.
 
 - **New stacks** that match the conventions below and pull their
   weight (something more than a vendor quickstart with a healthcheck
-  glued on). File a [new-stack issue](https://github.com/mertgunay/boilerplates/issues/new?template=new_stack.yml)
+  glued on). File a [new-stack issue](https://github.com/mertgunay/homelab/issues/new?template=new_stack.yml)
   first to check fit before you write a PR.
 - **Fixes** to existing stacks: image bumps, healthcheck adjustments,
   README corrections, security tightening.
