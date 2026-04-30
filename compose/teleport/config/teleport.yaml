@@ -1,0 +1,66 @@
+# Teleport configuration — single-node Auth + Proxy + SSH.
+#
+# Three values you MUST change before first boot. They cannot be changed
+# later without resetting the cluster:
+#   1. teleport.nodename
+#   2. auth_service.cluster_name
+#   3. proxy_service.public_addrs (and webauthn.rp_id below — must match the host portion)
+#
+# Pick a TLS strategy and uncomment exactly one of:
+#   - proxy_service.acme (Let's Encrypt HTTP-01)
+#   - proxy_service.https_keypairs (bring your own cert)
+#
+# Reference: https://goteleport.com/docs/reference/config/
+
+version: v3
+
+teleport:
+  nodename: teleport-1
+  data_dir: /var/lib/teleport
+  log:
+    output: stderr
+    severity: INFO
+    format:
+      output: json
+
+auth_service:
+  enabled: true
+  cluster_name: my-cluster      # CHANGE ME — lowercase, no spaces, immutable
+  listen_addr: 0.0.0.0:3025
+  proxy_listener_mode: multiplex   # required for single-port TLS routing
+  authentication:
+    type: local
+    second_factor: webauthn
+    webauthn:
+      rp_id: teleport.example.com   # CHANGE ME — hostname of public_addrs below
+      # attestation_allowed_cas / attestation_denied_cas: configure if you want
+      # to restrict the YubiKey / TPM models accepted as MFA tokens.
+
+proxy_service:
+  enabled: true
+  web_listen_addr: 0.0.0.0:443
+  public_addrs: ["teleport.example.com:443"]   # CHANGE ME
+
+  # --- TLS — pick exactly one of (a) / (b) below ---
+
+  # (a) ACME (Let's Encrypt) HTTP-01. Requires the proxy to be reachable on
+  # public DNS at port 80 + 443 during certificate issuance and renewal.
+  # acme:
+  #   enabled: true
+  #   email: ops@example.com   # CHANGE ME
+
+  # (b) Bring-your-own certificate. Drop files into ./certs/ and reference
+  # them here. Useful when you terminate ACME externally (DNS-01, your own
+  # CA, etc.). Multiple keypairs supported for SAN / SNI variants.
+  # https_keypairs:
+  #   - cert_file: /var/lib/teleport-certs/fullchain.pem
+  #     key_file: /var/lib/teleport-certs/privkey.pem
+
+ssh_service:
+  enabled: true
+  labels:
+    role: control-plane
+  # commands:
+  #   - name: hostname
+  #     command: [hostname]
+  #     period: 1h0m0s

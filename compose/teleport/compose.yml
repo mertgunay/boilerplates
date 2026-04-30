@@ -1,0 +1,77 @@
+# Teleport Community Edition — single-node auth + proxy + ssh.
+#
+# Defaults:
+#   - public.ecr.aws/gravitational/teleport:18.7.2 (CE), version-pinned.
+#   - Auth + Proxy + SSH services run in one container — fine for a small
+#     fleet, fine for a personal homelab. For HA / multi-region you'd run
+#     Auth and Proxy as separate processes; that's out of scope here.
+#   - TLS routing enabled (single-port mode): everything multiplexed on
+#     :443 — UI, SSH, reverse tunnel, kube, db. No need to publish 3022 /
+#     3023 / 3024 / 3025.
+#   - Storage: local SQLite (default). Survives container restarts via the
+#     `teleport-data` named volume.
+#   - No license file required (Community Edition).
+#
+# !! Before first boot you MUST edit config/teleport.yaml:
+#      - set `cluster_name`
+#      - set `proxy_service.public_addrs` to the host you'll reach the proxy at
+#      - set `auth_service.authentication.webauthn.rp_id` to the SAME hostname
+#    These three values cannot be changed without resetting the cluster.
+#
+# !! TLS is required. Pick one and uncomment in config/teleport.yaml:
+#      a) ACME (Let's Encrypt) — easiest if the host can serve HTTP/HTTPS
+#         publicly. Requires `acme.email` set.
+#      b) BYO certificate — drop fullchain.pem + privkey.pem into ./certs/
+#         and reference them under `proxy_service.https_keypairs`.
+#    Without one, the proxy starts with a self-signed cert and clients
+#    will reject it.
+#
+# Requires Docker Compose v2.20+.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+services:
+
+  teleport:
+    image: public.ecr.aws/gravitational/teleport:${TELEPORT_VERSION:-18.7.2}
+    container_name: teleport
+    restart: unless-stopped
+    command:
+      - teleport
+      - start
+      - --config=/etc/teleport.yaml
+    ports:
+      # All traffic is multiplexed on 443 thanks to TLS routing.
+      - "${TELEPORT_PROXY_PORT:-443}:443"
+    volumes:
+      - ./config/teleport.yaml:/etc/teleport.yaml:ro
+      - ./certs:/var/lib/teleport-certs:ro
+      - teleport-data:/var/lib/teleport
+    environment:
+      # Reference only — Teleport reads cluster_name / public_addrs / rp_id
+      # from teleport.yaml, not env vars. These are duplicated here so the
+      # values live in one place (.env) for ops convenience.
+      - TELEPORT_CLUSTER_NAME=${TELEPORT_CLUSTER_NAME:-edit-config-yaml}
+      - TELEPORT_PROXY_PUBLIC_ADDR=${TELEPORT_PROXY_PUBLIC_ADDR:-edit-config-yaml}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS --insecure https://localhost/healthz >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+    logging: *logging-default
+
+volumes:
+  teleport-data:

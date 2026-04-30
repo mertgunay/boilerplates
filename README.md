@@ -35,6 +35,7 @@ The bar for what lives here:
 | [`compose/signoz`](compose/signoz) | SigNoz minimal core — single-pane-of-glass observability on ClickHouse |
 | [`compose/signoz-with-nginx`](compose/signoz-with-nginx) | SigNoz with a hardened nginx reverse proxy in front (rate limiting, security headers, JSON access log) |
 | [`compose/grafana-lgtm`](compose/grafana-lgtm) | Grafana LGTM — Loki + Grafana + Tempo + Mimir + Pyroscope + Alloy in one compose, datasources auto-provisioned |
+| [`compose/teleport`](compose/teleport) | Teleport CE — single-node identity-based access (SSH, Kubernetes, db, web app proxy) with WebAuthn MFA and TLS routing on `:443` |
 
 ## Using a stack
 
