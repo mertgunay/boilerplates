@@ -1,44 +1,103 @@
+# Nginx Proxy Manager — graphical reverse proxy + Let's Encrypt manager.
+#
+# Defaults:
+#   - All images version-pinned (NPM 2.11.3 + MariaDB 11.5).
+#   - Public ports on :80 / :443 (the whole point — NPM fronts your services).
+#   - Admin UI on 127.0.0.1:81 only. Tunnel or use a reverse-proxy host
+#     entry to reach it from elsewhere.
+#   - Database on a separate `npm_db_net` (internal: true) so it has no
+#     route to the host network or other compose stacks.
+#   - npm waits for the database to be `service_healthy` before starting.
+#   - Healthchecks, resource limits, log rotation on every service.
+#
+# !! Default admin credentials on first boot are admin@example.com /
+#    changeme. Change them in the UI immediately. The README walks through this.
+#
+# Requires Docker Compose v2.20+.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
 services:
 
-  nginxproxymanager:
-    image: 'jc21/nginx-proxy-manager:latest'
+  npm:
+    image: jc21/nginx-proxy-manager:2.11.3
+    container_name: npm
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - 80:80
-      - 127.0.0.1:81:81
-      - 443:443
-      # Add any other Stream port you want to expose
-      # - '21:21' # FTP
+      - "${NPM_HTTP_PORT:-80}:80"
+      - "${NPM_HTTPS_PORT:-443}:443"
+      - "127.0.0.1:${NPM_ADMIN_PORT:-81}:81"
+      # Add stream ports here as needed (NPM supports TCP/UDP forwarding):
+      # - "21:21" # FTP
     environment:
       - DB_MYSQL_HOST=db
-      - DB_MYSQL_PORT=${DB_MYSQL_PORT}
+      - DB_MYSQL_PORT=3306
       - DB_MYSQL_USER=${DB_MYSQL_USER}
       - DB_MYSQL_PASSWORD=${DB_MYSQL_PASSWORD}
       - DB_MYSQL_NAME=${DB_MYSQL_NAME}
-      - PUID=${PUID}
-      - PGID=${PGID}
+      - PUID=${PUID:-0}
+      - PGID=${PGID:-0}
     volumes:
       - npm-data:/data
       - npm-ssl:/etc/letsencrypt
-    depends_on:
-      - db
-    env_file:
-      - .env
+    networks:
+      - default      # public — :80 / :443 / loopback :81 reach this
+      - npm_db_net   # internal — DB only
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:81/api"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging: *logging-default
 
   db:
-    image: 'jc21/mariadb-aria:latest'
+    image: mariadb:11.5-noble
+    container_name: npm-db
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MARIADB_AUTO_UPGRADE='1'
+      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in your env file}
+      - MARIADB_DATABASE=${MYSQL_DATABASE}
+      - MARIADB_USER=${MYSQL_USER}
+      - MARIADB_PASSWORD=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in your env file}
+      - MARIADB_AUTO_UPGRADE=1
     volumes:
       - npm-db:/var/lib/mysql
-
+    networks:
+      - npm_db_net   # internal only — no host or LAN reachability
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p\"$$MARIADB_ROOT_PASSWORD\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging: *logging-default
 
 volumes:
   npm-data:
   npm-ssl:
   npm-db:
+
+networks:
+  default:
+    name: npm_public_net
+  npm_db_net:
+    internal: true
