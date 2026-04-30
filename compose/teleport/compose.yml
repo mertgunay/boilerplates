@@ -1,7 +1,10 @@
 # Teleport Community Edition — single-node auth + proxy + ssh.
 #
 # Defaults:
-#   - public.ecr.aws/gravitational/teleport:18.7.2 (CE), version-pinned.
+#   - public.ecr.aws/gravitational/teleport-distroless:18.7.3 (CE),
+#     version-pinned. Upstream consolidated their CE images onto the
+#     distroless variant — the older `teleport` image is no longer
+#     published.
 #   - Auth + Proxy + SSH services run in one container — fine for a small
 #     fleet, fine for a personal homelab. For HA / multi-region you'd run
 #     Auth and Proxy as separate processes; that's out of scope here.
@@ -38,18 +41,18 @@ x-logging-default: &logging-default
 services:
 
   teleport:
-    image: public.ecr.aws/gravitational/teleport:${TELEPORT_VERSION:-18.7.2}
+    image: public.ecr.aws/gravitational/teleport-distroless:${TELEPORT_VERSION:-18.7.3}
     container_name: teleport
     restart: unless-stopped
-    command:
-      - teleport
-      - start
-      - --config=/etc/teleport.yaml
+    # The distroless image's entrypoint already runs
+    # `dumb-init teleport start -c /etc/teleport/teleport.yaml`, so
+    # there's no command to set here — just mount the config to the
+    # path the entrypoint expects.
     ports:
       # All traffic is multiplexed on 443 thanks to TLS routing.
       - "${TELEPORT_PROXY_PORT:-443}:443"
     volumes:
-      - ./config/teleport.yaml:/etc/teleport.yaml:ro
+      - ./config/teleport.yaml:/etc/teleport/teleport.yaml:ro
       - ./certs:/var/lib/teleport-certs:ro
       - teleport-data:/var/lib/teleport
     environment:
@@ -59,13 +62,12 @@ services:
       # blank .env fails loudly at compose-validation time. Keep them in
       # sync with config/teleport.yaml.
       - TELEPORT_CLUSTER_NAME=${TELEPORT_CLUSTER_NAME:?set TELEPORT_CLUSTER_NAME in your env file (must match auth_service.cluster_name in config/teleport.yaml)}
-      - TELEPORT_PROXY_PUBLIC_ADDR=${TELEPORT_PROXY_PUBLIC_ADDR:?set TELEPORT_PROXY_PUBLIC_ADDR in your env file (must match proxy_service.public_addrs in config/teleport.yaml)}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --insecure https://localhost/healthz >/dev/null"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      - TELEPORT_PROXY_PUBLIC_ADDR=${TELEPORT_PROXY_PUBLIC_ADDR:?set TELEPORT_PROXY_PUBLIC_ADDR in your env file (must match proxy_service.public_addr in config/teleport.yaml)}
+    # The distroless image has no shell or curl/wget, so an in-container
+    # healthcheck is not possible. The /healthz endpoint stays exposed —
+    # probe it from your reverse proxy / load balancer / monitoring agent.
+    # Single-service stack, so there are no Compose dependents that need
+    # `condition: service_healthy`.
     deploy:
       resources:
         limits:

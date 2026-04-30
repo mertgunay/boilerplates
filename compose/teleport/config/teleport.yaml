@@ -4,7 +4,7 @@
 # later without resetting the cluster:
 #   1. teleport.nodename
 #   2. auth_service.cluster_name
-#   3. proxy_service.public_addrs (and webauthn.rp_id below — must match the host portion)
+#   3. proxy_service.public_addr (and webauthn.rp_id below — must match the host portion)
 #
 # Pick a TLS strategy and uncomment exactly one of:
 #   - proxy_service.acme (Let's Encrypt HTTP-01)
@@ -39,7 +39,7 @@ auth_service:
 proxy_service:
   enabled: true
   web_listen_addr: 0.0.0.0:443
-  public_addrs: ["teleport.example.com:443"]   # CHANGE ME
+  public_addr: "teleport.example.com:443"   # CHANGE ME
 
   # --- TLS — pick exactly one of (a) / (b) below ---
 
