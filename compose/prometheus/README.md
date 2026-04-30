@@ -17,9 +17,14 @@ Add more scrape jobs there for your own apps.
 ## Requirements
 
 - Docker Engine 24+, Docker Compose v2.20+
-- Linux host preferred — node-exporter and cAdvisor mount host paths with
-  `rslave` propagation, which Docker Desktop on macOS handles
-  inconsistently (host metrics may be partial)
+- **Linux host required for the full stack.** node-exporter and cAdvisor
+  mount the root filesystem with `rslave` propagation. Docker Desktop on
+  macOS / Windows runs containers inside a VM that does not share mount
+  propagation with the host, so both containers fail to start with
+  `path / is mounted on / but it is not a shared or slave mount`. The
+  `prometheus` service itself runs fine cross-platform — comment out the
+  `node-exporter` and `cadvisor` services if you only want the TSDB + UI
+  on a non-Linux dev box.
 
 ## Quick start
 
