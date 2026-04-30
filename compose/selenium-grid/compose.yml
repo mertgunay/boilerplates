@@ -1,27 +1,107 @@
+# Selenium Grid 4 — hub + browser node(s).
+#
+# Defaults:
+#   - Hub UI on 127.0.0.1:4444 only. Event bus ports (4442 / 4443) are
+#     internal — they do not need to be published to the host.
+#   - One Chrome node, configured to run up to 8 concurrent sessions.
+#   - VNC is OFF. Uncomment the marked sections below to enable noVNC for
+#     debugging (web VNC at 127.0.0.1:7900, password via env).
+#   - Healthchecks on hub and node so dependents can wait on `service_healthy`.
+#   - Resource limits set so a runaway test can't starve the host.
+#   - shm_size 2g on browser nodes (Chromium needs it; without it tests
+#     crash with "DevToolsActivePort file doesn't exist" or similar).
+#
+# Scale browser instances:
+#   docker compose up -d --scale chrome=4
+#
+# Add another browser engine:
+#   Uncomment the `firefox` or `edge` services below. Note that `edge` is
+#   only published for linux/amd64; Apple Silicon developers need to use
+#   chrome / firefox.
+
+x-logging-default: &logging-default
+  driver: "local"
+  options:
+    max-size: "50m"
+    max-file: "5"
+    compress: "true"
+
+x-node-defaults: &node-defaults
+  shm_size: 2gb
+  restart: unless-stopped
+  depends_on:
+    selenium-hub:
+      condition: service_healthy
+  environment: &node-env
+    - SE_EVENT_BUS_HOST=selenium-hub
+    - SE_EVENT_BUS_PUBLISH_PORT=4442
+    - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    - SE_NODE_SESSION_TIMEOUT=300
+    - SE_START_XVFB=false
+    - SE_START_VNC=false
+    - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    - SE_NODE_MAX_SESSIONS=${SE_NODE_MAX_SESSIONS:-8}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --spider -q http://localhost:5555/status"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+  deploy:
+    resources:
+      limits:
+        memory: 2g
+        cpus: "2.0"
+  logging: *logging-default
 
 services:
 
   selenium-hub:
-    image: selenium/hub:4.15.0-20231122
+    image: selenium/hub:4.27.0
+    container_name: selenium-hub
     restart: unless-stopped
     ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
+      - "127.0.0.1:${HUB_PORT:-4444}:4444"
+      # Event bus — internal only. Nodes connect via container DNS.
+    environment:
+      - SE_SESSION_REQUEST_TIMEOUT=${SE_SESSION_REQUEST_TIMEOUT:-300}
+      - SE_SESSION_RETRY_INTERVAL=15
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4444/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging: *logging-default
 
   chrome:
-    image: selenium/node-chrome:4.15.0-20231122
-    shm_size: 2gb
-    restart: unless-stopped
-    depends_on:
-      - selenium-hub
+    <<: *node-defaults
+    image: selenium/node-chrome:4.27.0
+    # No container_name — it would block `docker compose up --scale chrome=N`.
     environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_SESSION_TIMEOUT=30
-      - SE_START_XVFB=false
-      - SE_START_VNC=false
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_NODE_MAX_SESSIONS=8
-      - JAVA_OPTS=-XX:ActiveProcessorCount=8
+      <<: *node-env
+      # Uncomment to enable noVNC (browser-accessible VNC) on this node:
+      # - SE_START_XVFB=true
+      # - SE_START_VNC=true
+      # - SE_VNC_NO_PASSWORD=0
+      # - SE_VNC_PASSWORD=${SE_VNC_PASSWORD:?set SE_VNC_PASSWORD when enabling VNC}
+
+  # Uncomment to add a Firefox node:
+  # firefox:
+  #   <<: *node-defaults
+  #   image: selenium/node-firefox:4.27.0
+
+  # Uncomment to add an Edge node (linux/amd64 only):
+  # edge:
+  #   <<: *node-defaults
+  #   image: selenium/node-edge:4.27.0
+  #   platform: linux/amd64
+
+networks:
+  default:
+    name: selenium_grid_net
