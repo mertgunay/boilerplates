@@ -12,6 +12,12 @@ and Edge nodes.
 - Docker Engine 24+, Docker Compose v2.20+
 - ~3 GB RAM headroom per browser node (the limit is set to 2 GB, plus
   shm_size of 2 GB)
+- **linux/amd64 host.** Upstream `selenium/node-chrome` (and Edge) ship
+  amd64-only — Google does not publish a stable linux/arm64 Chrome
+  build. On Apple Silicon, `up -d` fails with `no matching manifest for
+  linux/arm64/v8`. Either run the stack on an x86_64 VM (the production
+  target) or add `platform: linux/amd64` to each node service to force
+  Rosetta translation for casual local testing.
 
 ## Quick start
 
