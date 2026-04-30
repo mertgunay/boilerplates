@@ -1,5 +1,10 @@
 # boilerplates
 
+[![License: MIT](https://img.shields.io/github/license/mertgunay/boilerplates)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/mertgunay/boilerplates?display_name=tag&sort=semver)](https://github.com/mertgunay/boilerplates/releases)
+[![Last commit](https://img.shields.io/github/last-commit/mertgunay/boilerplates)](https://github.com/mertgunay/boilerplates/commits/main)
+[![Open issues](https://img.shields.io/github/issues/mertgunay/boilerplates)](https://github.com/mertgunay/boilerplates/issues)
+
 **Production-leaning Docker Compose stacks for self-hosting** — Postgres,
 Redis, nginx, Nginx Proxy Manager, Selenium Grid, Prometheus, SigNoz,
 Grafana LGTM, Teleport, and friends. Each stack starts from the

@@ -1,0 +1,43 @@
+# Dependabot keeps the pinned image versions in this repo current.
+#
+# - `docker-compose` ecosystem watches the `image:` keys in every
+#   compose.yml. The `compose/*` glob picks up new stacks automatically
+#   — no edit here when a stack is added.
+# - `docker` ecosystem watches `FROM` lines in any Dockerfile under
+#   `compose/`. Recursive glob finds them wherever they end up.
+# - `github-actions` keeps the validate workflow's actions current.
+#
+# Updates batched weekly. All image bumps within a stack land in a
+# single grouped PR — image tags are tightly coupled within a stack
+# (clickhouse + zookeeper, prometheus + node-exporter, etc.).
+
+version: 2
+updates:
+
+  - package-ecosystem: "docker-compose"
+    directories:
+      - "/compose/*"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    open-pull-requests-limit: 10
+    groups:
+      images:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/compose/**"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"

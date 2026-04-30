@@ -1,0 +1,13 @@
+# Steer help-style requests to Discussions and security to the
+# Security Advisories flow. Keeps Issues focused on real bugs and
+# new-stack proposals.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question / help
+    url: https://github.com/mertgunay/boilerplates/discussions
+    about: Setup help, "is this stack a good fit for X?", show & tell.
+  - name: Security vulnerability
+    url: https://github.com/mertgunay/boilerplates/security/advisories/new
+    about: Private report. Do not file a public issue for security bugs.

@@ -1,0 +1,41 @@
+name: New stack request
+description: Suggest a new self-hosting stack to add to the repo.
+title: "[new-stack] <service name>"
+labels: ["new-stack", "enhancement"]
+body:
+
+  - type: input
+    id: service
+    attributes:
+      label: What service / project
+      description: Name + upstream URL.
+      placeholder: "Vaultwarden — https://github.com/dani-garcia/vaultwarden"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does this fit
+      description: |
+        The bar in this repo is "self-hosted, runs on Docker Compose,
+        has enough operational nuance that a quickstart doesn't cut
+        it." Make a brief case for why a boilerplate here would save
+        someone real time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: gotchas
+    attributes:
+      label: Known gotchas
+      description: |
+        What does the upstream quickstart get wrong / leave out for
+        production? Examples: missing healthchecks, default
+        credentials, exposed admin port, no resource limits.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Links to existing reference compose files, helpful blog posts, etc.

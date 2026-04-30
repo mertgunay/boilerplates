@@ -1,0 +1,75 @@
+name: Bug report
+description: A stack does not behave as documented.
+title: "[bug] <stack> — <one-line summary>"
+labels: ["bug"]
+body:
+
+  - type: input
+    id: stack
+    attributes:
+      label: Which stack
+      description: Directory name under `compose/`. `other` if it spans multiple.
+      placeholder: postgres
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, what did you expect, what did you get?
+      placeholder: |
+        Steps:
+          1. cp .env.example .env (filled in values)
+          2. docker compose up -d
+          3. docker compose ps
+
+        Expected: <service> healthy.
+        Got: <service> stuck in "starting", logs show ...
+    validations:
+      required: true
+
+  - type: input
+    id: docker-engine
+    attributes:
+      label: Docker Engine version
+      placeholder: "29.4.1"
+    validations:
+      required: true
+
+  - type: input
+    id: compose-version
+    attributes:
+      label: Docker Compose version
+      placeholder: "v2.30.0"
+    validations:
+      required: true
+
+  - type: input
+    id: host-os
+    attributes:
+      label: Host OS / arch
+      placeholder: "Ubuntu 24.04 LTS, x86_64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Output of `docker compose logs --tail=50 <service>`. Redact any
+        real secrets — the .env values you used should not be here.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Sanity checks
+      options:
+        - label: I'm using the latest tag from this repo (or `main`).
+          required: true
+        - label: I have read this stack's README and Security checklist.
+          required: true
+        - label: This is not a question — questions go to Discussions.
+          required: true
