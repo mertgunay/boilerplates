@@ -1,60 +1,89 @@
+# PostgreSQL — generic boilerplate.
+#
+# Defaults:
+#   - Official postgres:17-alpine image (small, current).
+#   - Bridge network with a published port on 127.0.0.1 only (safe default).
+#   - File-based Docker secrets sourced from the host environment, so the real
+#     values stay in your local config file (see env.example) and never reach the image.
+#   - Persistent named volume, log rotation, scram-sha-256 auth.
+#   - Healthcheck via pg_isready so dependents can `depends_on: { condition: service_healthy }`.
+#
+# Requires Docker Compose v2.20+ (uses `secrets.environment` and top-level `configs`).
+
 services:
   postgres:
-    # If you want to use more configuration,
-    # use Dockerfile instead of image: attribute.
-    build:
-       context: .
-       dockerfile: ./Dockerfile
-    # image: postgres:16.1
+    image: postgres:17-alpine
     container_name: postgres
-    volumes:
-      - pg_data:/var/lib/postgresql/data/
-    # If you want to isolate your docker container,
-    # Use networks configurations
-    #networks:
-    #  - postgres_network
-    # Otherwise
-    network_mode: host
-    # Ufw will not work if you use ports.
-    # It will write a row to IPTABLES even if Ufw blocks
-    # this port so don't use it if possible.
-    # ports:
-    #  - "${POSTGRES_DB:-5432}:5432"
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: 30s
+
+    # Default: publish only to the loopback interface. Reach the DB from the host
+    # at 127.0.0.1:${POSTGRES_PORT}; reach it from other containers via the
+    # `postgres_net` network defined below.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - postgres_net
+
+    # Alternative: host networking. Skips the userland proxy and binds directly
+    # on the host. Note that ufw/iptables rules on the docker chain may NOT
+    # apply — verify with `iptables -L` before relying on a firewall. To use it,
+    # comment out `ports` and `networks` above and uncomment the next line.
+    # network_mode: host
+
     environment:
-      # - LANG='tr_TR.utf8'
-      # - POSTGRES_INITDB_ARGS='--locale-provider=icu --icu-locale=tr_TR'
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_DB_FILE=/run/secrets/postgres-db
       - POSTGRES_USER_FILE=/run/secrets/postgres-user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-passwd
-    logging:
-      options:
-        max-size: 100m
-        max-file: "6"
-    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
-    stop_grace_period: 10s
-    configs:
-      - source: postgresql.conf
-        target: /etc/postgresql/postgresql.conf
+
     secrets:
       - postgres-db
       - postgres-user
       - postgres-passwd
+
+    configs:
+      - source: postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+
     command:
       - "postgres"
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
 
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # First-boot init scripts. Drop *.sql or *.sh files into ./initdb/ to run
+      # them once when the data directory is empty (no effect on existing DBs).
+      # - ./initdb:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$(cat /run/secrets/postgres-user)\" -d \"$$(cat /run/secrets/postgres-db)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    logging:
+      options:
+        max-size: "100m"
+        max-file: "6"
+
+    # Uncomment to cap container resources. Tune to your host.
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "2.0"
+    #       memory: 2g
+    #     reservations:
+    #       memory: 512m
+
 volumes:
-  pg_data: { }
+  pg_data: {}
 
 networks:
-  postgres_network:
+  postgres_net:
     driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/16
 
 secrets:
   postgres-db:
@@ -67,4 +96,3 @@ secrets:
 configs:
   postgresql.conf:
     file: ./postgresql.conf
-  
