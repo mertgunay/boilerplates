@@ -4,8 +4,10 @@ Generic PostgreSQL stack — official `postgres:17-alpine` image, file-based Doc
 secrets, scram-sha-256 auth, healthcheck, log rotation, persistent named volume.
 
 > Boilerplate / starter. Review every default before running this in production.
-> In particular: rotate the placeholder credentials, decide on a backup strategy,
-> set resource limits, and confirm the network exposure matches your context.
+> In particular: fill in `.env` with real credentials (the file ships blank so
+> the official image refuses to start without them), decide on a backup
+> strategy, set resource limits, and confirm the network exposure matches
+> your context.
 
 ## Requirements
 
@@ -86,7 +88,7 @@ Whatever you choose, **test the restore** on a fresh host before relying on it.
 
 ## Production checklist
 
-- [ ] Replaced every placeholder credential with real values, stored outside the repo
+- [ ] Filled in every blank value in `.env` with real credentials, stored outside the repo
 - [ ] Decided whether the loopback-only port binding is correct (LAN? VPN-only?)
 - [ ] Set `deploy.resources.limits` to match your host
 - [ ] Tuned `shared_buffers`, `work_mem`, and `max_connections` in `postgresql.conf`

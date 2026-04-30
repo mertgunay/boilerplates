@@ -14,6 +14,10 @@ services:
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     stop_grace_period: 30s
 
+    # See compose/postgres for the rationale (parallel query / large sort
+    # workers need more shm than the 64 MB default).
+    shm_size: 128mb
+
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     networks:
@@ -31,7 +35,7 @@ services:
       # very first boot (when the data volume is empty). To change them later
       # you must dump, drop the volume, recreate, and restore.
       - LANG=tr_TR.UTF-8
-      - POSTGRES_INITDB_ARGS=--locale=tr_TR.UTF-8 --encoding=UTF8
+      - POSTGRES_INITDB_ARGS=--locale=tr_TR.UTF-8 --encoding=UTF8 --data-checksums
 
     secrets:
       - postgres-db

@@ -17,6 +17,11 @@ services:
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
     stop_grace_period: 30s
 
+    # PostgreSQL needs shared memory for parallel query workers and large
+    # sorts. The default 64 MB is undersized; the official compose example
+    # recommends 128 MB.
+    shm_size: 128mb
+
     # Default: publish only to the loopback interface. Reach the DB from the host
     # at 127.0.0.1:${POSTGRES_PORT}; reach it from other containers via the
     # `postgres_net` network defined below.
@@ -36,6 +41,9 @@ services:
       - POSTGRES_DB_FILE=/run/secrets/postgres-db
       - POSTGRES_USER_FILE=/run/secrets/postgres-user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-passwd
+      # Detect on-disk corruption early. Applied at initdb only; existing
+      # clusters are unaffected.
+      - POSTGRES_INITDB_ARGS=--data-checksums
 
     secrets:
       - postgres-db
