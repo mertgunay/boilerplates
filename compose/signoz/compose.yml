@@ -18,12 +18,15 @@
 # light load. Telemetry retention is configured at runtime via the SigNoz UI
 # (Settings → Data Retention) — there are no compose-time TTL knobs.
 #
-# !! Before first boot you MUST fetch the ClickHouse XML configs from upstream:
+# !! Before first boot you MUST fetch the ClickHouse XML configs and the
+#    OpenTelemetry Collector OpAMP config from upstream. SigNoz reorganised
+#    these out of `deploy/docker/clickhouse-setup/` and into `deploy/common/`
+#    around v0.120 — make sure to clone the same tag you pin below.
 #
-#   git clone --depth 1 https://github.com/SigNoz/signoz.git /tmp/signoz-src
+#   git clone --depth 1 --branch v0.120.0 https://github.com/SigNoz/signoz.git /tmp/signoz-src
 #   mkdir -p ./config/clickhouse
-#   cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/*.xml \
-#      ./config/clickhouse/
+#   cp /tmp/signoz-src/deploy/common/clickhouse/*.xml ./config/clickhouse/
+#   cp /tmp/signoz-src/deploy/common/signoz/otel-collector-opamp-config.yaml ./config/
 #   # see README.md for the exact list and version-pin guidance.
 
 x-logging-default: &logging-default

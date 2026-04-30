@@ -1,2 +1,9 @@
 .idea/
 .env
+
+# Vendor configs fetched from upstream signoz/signoz at deploy time.
+# Each stack's README documents how to copy them in.
+compose/signoz/config/clickhouse/
+compose/signoz/config/otel-collector-opamp-config.yaml
+compose/signoz-with-nginx/config/clickhouse/
+compose/signoz-with-nginx/config/otel-collector-opamp-config.yaml

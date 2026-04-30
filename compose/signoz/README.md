@@ -67,17 +67,18 @@ repo, matching the `SIGNOZ_VERSION` you pin in `.env`:
 SIGNOZ_REF="${SIGNOZ_VERSION:-v0.120.0}"
 git clone --depth 1 --branch "$SIGNOZ_REF" https://github.com/SigNoz/signoz.git /tmp/signoz-src
 mkdir -p ./config/clickhouse
-cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/config.xml         ./config/clickhouse/
-cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/users.xml          ./config/clickhouse/
-cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/custom-function.xml ./config/clickhouse/
-cp /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/cluster.xml         ./config/clickhouse/
-cp -r /tmp/signoz-src/deploy/docker/clickhouse-setup/clickhouse-config/users.d          ./config/clickhouse/
-cp /tmp/signoz-src/deploy/docker/clickhouse-setup/otel-collector-opamp-config.yaml      ./config/
+cp /tmp/signoz-src/deploy/common/clickhouse/config.xml          ./config/clickhouse/
+cp /tmp/signoz-src/deploy/common/clickhouse/users.xml           ./config/clickhouse/
+cp /tmp/signoz-src/deploy/common/clickhouse/custom-function.xml ./config/clickhouse/
+cp /tmp/signoz-src/deploy/common/clickhouse/cluster.xml         ./config/clickhouse/
+cp /tmp/signoz-src/deploy/common/signoz/otel-collector-opamp-config.yaml ./config/
 rm -rf /tmp/signoz-src
 ```
 
-The exact paths in upstream may shift between versions — if `cp` fails,
-check the upstream `deploy/docker/` tree for renames.
+The exact paths in upstream may shift between versions (SigNoz moved
+from `deploy/docker/clickhouse-setup/` to `deploy/common/` around
+v0.120). If `cp` fails, browse the cloned tree under `/tmp/signoz-src`
+and adjust the paths.
 
 ### 3. Boot the stack
 
