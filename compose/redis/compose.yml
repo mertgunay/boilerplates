@@ -29,7 +29,7 @@ x-logging-default: &logging-default
 services:
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:8.6-alpine
     container_name: redis
     restart: unless-stopped
     command:

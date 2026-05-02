@@ -31,7 +31,7 @@ x-logging-default: &logging-default
 services:
 
   prometheus:
-    image: prom/prometheus:v2.55.0
+    image: prom/prometheus:v3.11.3
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -60,7 +60,7 @@ services:
     logging: *logging-default
 
   node-exporter:
-    image: quay.io/prometheus/node-exporter:v1.8.2
+    image: quay.io/prometheus/node-exporter:v1.11.1
     container_name: node-exporter
     restart: unless-stopped
     command:
@@ -90,7 +90,7 @@ services:
     logging: *logging-default
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.50.0
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: cadvisor
     restart: unless-stopped
     # Privileged + the device mount are how cAdvisor reads host kernel
