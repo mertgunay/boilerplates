@@ -19,7 +19,7 @@ x-logging-default: &logging-default
     compress: "true"
 
 x-clickhouse-defaults: &clickhouse-defaults
-  image: clickhouse/clickhouse-server:25.5.6
+  image: clickhouse/clickhouse-server:26.3.9
   tty: true
   restart: unless-stopped
   depends_on:
@@ -42,7 +42,7 @@ x-clickhouse-defaults: &clickhouse-defaults
   logging: *logging-default
 
 x-zookeeper-defaults: &zookeeper-defaults
-  image: signoz/zookeeper:3.7.1
+  image: signoz/zookeeper:3.9.3
   user: root
   restart: unless-stopped
   healthcheck:
@@ -101,7 +101,7 @@ services:
     logging: *logging-default
 
   init-clickhouse:
-    image: clickhouse/clickhouse-server:25.5.6
+    image: clickhouse/clickhouse-server:26.3.9
     container_name: signoz-init-clickhouse
     command:
       - bash
