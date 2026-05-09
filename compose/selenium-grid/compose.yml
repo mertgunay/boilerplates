@@ -59,7 +59,7 @@ x-node-defaults: &node-defaults
 services:
 
   selenium-hub:
-    image: selenium/hub:4.27.0
+    image: selenium/hub:4.43.0
     container_name: selenium-hub
     restart: unless-stopped
     ports:
@@ -83,7 +83,7 @@ services:
 
   chrome:
     <<: *node-defaults
-    image: selenium/node-chrome:4.27.0
+    image: selenium/node-chrome:147.0.7727.55
     # No container_name — it would block `docker compose up --scale chrome=N`.
     environment:
       <<: *node-env
