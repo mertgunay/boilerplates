@@ -27,7 +27,7 @@ jobs:
       stacks: ${{ steps.scan.outputs.stacks }}
       dockerfiles: ${{ steps.scan.outputs.dockerfiles }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: scan
         run: |
           stacks=$(find compose -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | sort | jq -R . | jq -sc .)
@@ -44,7 +44,7 @@ jobs:
       matrix:
         stack: ${{ fromJson(needs.discover.outputs.stacks) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Validate compose file
         working-directory: compose/${{ matrix.stack }}
         # Provide a placeholder for every required key so the
@@ -73,7 +73,7 @@ jobs:
     name: yamllint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ibiqlik/action-yamllint@v3.1.1
         with:
           file_or_dir: .
@@ -111,7 +111,7 @@ jobs:
       matrix:
         dockerfile: ${{ fromJson(needs.discover.outputs.dockerfiles) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: ${{ matrix.dockerfile }}
@@ -120,7 +120,7 @@ jobs:
     name: shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # Pin to a specific tag instead of @master — branches accept
       # arbitrary commits and become a supply-chain risk over time.
       - uses: ludeeus/action-shellcheck@2.0.0
